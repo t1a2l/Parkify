@@ -1,7 +1,7 @@
 ﻿using System.Xml.Serialization;
 using Parkify.OptionsFramework.Attibutes;
 
-namespace Parkify
+namespace Parkify.Utils
 {
     [Options("Parkify")]
     public class Options

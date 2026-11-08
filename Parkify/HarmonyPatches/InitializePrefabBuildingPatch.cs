@@ -1,44 +1,17 @@
 using System;
 using System.Linq;
+using HarmonyLib;
 using Parkify.OptionsFramework;
+using Parkify.Utils;
 
-namespace Parkify.HarmonyPatches.BuildingInfoPatch
+namespace Parkify.HarmonyPatches
 {
-    public static class InitializePrefabPatch
+    [HarmonyPatch]
+    public static class InitializePrefabBuildingPatch
     {
-        private static bool deployed;
-
-        public static void Apply()
-        {
-            if (deployed)
-            {
-                return;
-            }
-
-            PatchUtil.Patch(
-                new PatchUtil.MethodDefinition(typeof(BuildingInfo),
-                    nameof(BuildingInfo.InitializePrefab)),
-                null,
-                new PatchUtil.MethodDefinition(typeof(InitializePrefabPatch), nameof(PostInitializePrefab)));
-
-            deployed = true;
-        }
-
-        public static void Undo()
-        {
-            if (!deployed)
-            {
-                return;
-            }
-
-            PatchUtil.Unpatch(
-                new PatchUtil.MethodDefinition(typeof(BuildingInfo),
-                    nameof(BuildingInfo.InitializePrefab)));
-
-            deployed = false;
-        }
-
-        private static void PostInitializePrefab(BuildingInfo __instance)
+        [HarmonyPatch(typeof(BuildingInfo), "InitializePrefab")]
+        [HarmonyPostfix]
+        public static void InitializePrefab(BuildingInfo __instance)
         {
             try
             {
@@ -74,13 +47,9 @@ namespace Parkify.HarmonyPatches.BuildingInfoPatch
             }
         }
 
- 
-
         private static void FixParkBuildingPlacementModeIfNeeded(BuildingInfo prefabInfo)
         {
-            if (prefabInfo.m_buildingAI is not ParkBuildingAI ||
-                prefabInfo.m_placementStyle == ItemClass.Placement.Procedural ||
-                prefabInfo.m_placementMode != BuildingInfo.PlacementMode.Roadside)
+            if (prefabInfo.m_buildingAI is not ParkBuildingAI || prefabInfo.m_placementStyle == ItemClass.Placement.Procedural || prefabInfo.m_placementMode != BuildingInfo.PlacementMode.Roadside)
             {
                 return;
             }
@@ -90,7 +59,7 @@ namespace Parkify.HarmonyPatches.BuildingInfoPatch
 
         private static void PatchMonumentSurfaceAndProps(BuildingInfo buildingInfo, TerrainModify.Surface pavementReplacement)
         {
-            buildingInfo.m_cellSurfaces = buildingInfo.m_cellSurfaces.Select(surface =>
+            buildingInfo.m_cellSurfaces = [.. buildingInfo.m_cellSurfaces.Select(surface =>
             {
                 if (surface == TerrainModify.Surface.PavementB)
                 {
@@ -98,13 +67,13 @@ namespace Parkify.HarmonyPatches.BuildingInfoPatch
                 }
 
                 return surface;
-            }).ToArray();
+            })];
+
             if (buildingInfo.m_props != null)
             {
-                buildingInfo.m_props = buildingInfo.m_props
-                    .Where(p => p?.m_prop?.name == null || !p.m_prop.name.Contains("Parking Spaces"))
-                    .ToArray();
+                buildingInfo.m_props = [.. buildingInfo.m_props.Where(p => p?.m_prop?.name == null || !p.m_prop.name.Contains("Parking Spaces"))];
             }
+
             buildingInfo.m_hasParkingSpaces &= ~VehicleInfo.VehicleType.Car;
         }
 
@@ -114,9 +83,9 @@ namespace Parkify.HarmonyPatches.BuildingInfoPatch
             {
                 return;
             }
-            
-            buildingInfo.m_cellSurfaces = new[]
-            {
+
+            buildingInfo.m_cellSurfaces =
+            [
                 TerrainModify.Surface.None,
                 TerrainModify.Surface.None,
                 TerrainModify.Surface.None,
@@ -133,21 +102,22 @@ namespace Parkify.HarmonyPatches.BuildingInfoPatch
                 TerrainModify.Surface.None,
                 TerrainModify.Surface.None,
                 TerrainModify.Surface.None,
-            };
+            ];
 
             var list = buildingInfo.m_props.ToList();
-            buildingInfo.m_props = list
+
+            buildingInfo.m_props = [.. list
                 .Where(p =>
-                    !p.m_prop.name.Contains("Parking Spaces") && 
+                    !p.m_prop.name.Contains("Parking Spaces") &&
                     !p.m_prop.name.Contains("StreetLamp") &&
                     !p.m_prop.name.Contains("Billboard") &&
                     !p.m_prop.name.Contains("kiosk") &&
-                    !p.m_prop.name.Contains("beergarden"))
-                .ToArray();
+                    !p.m_prop.name.Contains("beergarden"))];
+
             buildingInfo.m_hasParkingSpaces = VehicleInfo.VehicleType.None;
             buildingInfo.m_weakTerrainRuining = true;
         }
-        
+
         private static void PatchFloatingCafeBoats(BuildingInfo buildingInfo)
         {
             if (buildingInfo.m_props == null)
@@ -170,5 +140,6 @@ namespace Parkify.HarmonyPatches.BuildingInfoPatch
                 }
             }
         }
+
     }
 }

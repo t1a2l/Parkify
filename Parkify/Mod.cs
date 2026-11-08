@@ -1,40 +1,31 @@
 ﻿using System.Linq;
 using CitiesHarmony.API;
 using ICities;
-using Parkify.HarmonyPatches.BuildingInfoPatch;
 using Parkify.OptionsFramework;
+using Parkify.Utils;
 using UnityEngine;
 
 namespace Parkify
 {
-    public class LoadingExtension : LoadingExtensionBase
+    public class Mod : LoadingExtensionBase, IUserMod
     {
+        public string Name => "Parkify Renewed";
+
+        public string Description => "Allows to use the whole wealth of your park buildings as park modules";
+
         private static bool initialized;
 
-
-        //TODO(bloodypenguin): add option to remove concrete and parking slots
-
-        public override void OnCreated(ILoading loading)
+        public void OnEnabled()
         {
-            base.OnCreated(loading);
-            if (!HarmonyHelper.IsHarmonyInstalled)
-            {
-                return;
-            }
-
-            InitializePrefabPatch.Apply();
+            HarmonyHelper.DoOnHarmonyReady(() => Patcher.PatchAll());
         }
 
-        public override void OnReleased()
+        public void OnDisabled()
         {
-            base.OnReleased();
-            if (!HarmonyHelper.IsHarmonyInstalled)
+            if (HarmonyHelper.IsHarmonyInstalled)
             {
-                return;
+                Patcher.UnpatchAll();
             }
-
-            InitializePrefabPatch.Undo();
-            initialized = false;
         }
 
         public override void OnLevelLoaded(LoadMode mode)
@@ -96,7 +87,7 @@ namespace Parkify
                 m_requiredLength = 0
             };
             list.Add(prop);
-            buildingInfo.m_props = list.ToArray();
+            buildingInfo.m_props = [.. list];
         }
 
         private static void PatchMarinaProps()
@@ -119,5 +110,6 @@ namespace Parkify
             buildingInfo.m_props[15].m_radAngle = 1.5708f;
             buildingInfo.m_props[15].m_angle = 90;
         }
+
     }
 }

@@ -1,19 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Parkify.OptionsFramework;
-using Parkify.Utils;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace Parkify
+namespace Parkify.Utils
 {
-
     public static class ToParkBuildingHelper
     {
-        private static List<string> monumentExcludeList = new List<string>
-        {
+        private static readonly List<string> MonumentExcludeList =
+        [
             "Official Park",
             "Fancy Fountain",
             "Traffic Park",
@@ -31,7 +28,7 @@ namespace Parkify
             "Helicopter Park",
             "Lungs of the City",
             "Sparkly Unicorn Rainbow Park",
-            "Central Park", //TODO(bloodypenguin): make possible to use as the main gate? make sub buildings parks too
+            "Central Park",
             "Bird and Bee Haven",
             "Igloo Hotel",
             "Ice_Fishing_Pond",
@@ -39,7 +36,7 @@ namespace Parkify
             "Sphinx Of Scenarios",
             "Disaster Memorial",
             "Frozen Fountain"
-        };
+        ];
 
 
         public static bool ShouldPatchMonument(BuildingInfo prefabInfo)
@@ -49,23 +46,24 @@ namespace Parkify
                 return false;
             }
 
-            return prefabInfo.m_buildingAI is MonumentAI && monumentExcludeList.Contains(prefabInfo.name);
+            return prefabInfo.m_buildingAI is MonumentAI && MonumentExcludeList.Contains(prefabInfo.name);
         }
 
         private static DistrictPark.ParkType GetParkType(string prefabInfoName)
         {
-            //TODO(bloodypenguin): load type for workshop assets
             switch (prefabInfoName)
             {
                 case "Zoo":
                 case "Panda Sanctuary":
                     return DistrictPark.ParkType.Zoo;
+
                 case "bouncer_castle":
                 case "MerryGoRound":
                 case "MagickaPark":
                 case "Traffic Park":
                 case "Sphinx Of Scenarios":
                     return DistrictPark.ParkType.AmusementPark;
+
                 case "9x15_RidingStable":
                 case "Lungs of the City":
                 case "Bird and Bee Haven":
@@ -73,6 +71,9 @@ namespace Parkify
                 case "Igloo Hotel":
                 case "Sleigh Ride":
                     return DistrictPark.ParkType.NatureReserve;
+
+                default:
+                    break;
             }
 
             return DistrictPark.ParkType.Generic;
@@ -85,9 +86,7 @@ namespace Parkify
                 return;
             }
 
-            if (!(prefabInfo.m_buildingAI?.GetType() == typeof(ParkAI) ||
-                  prefabInfo.m_buildingAI is MonumentAI) ||
-                prefabInfo.name == null)
+            if (!(prefabInfo.m_buildingAI?.GetType() == typeof(ParkAI) || prefabInfo.m_buildingAI is MonumentAI) || prefabInfo.name == null)
             {
                 return;
             }
@@ -99,7 +98,7 @@ namespace Parkify
 
             var parkType = GetParkType(prefabInfo.name);
             ToParkBuildingInfo(prefabInfo, parkType);
-            UnityEngine.Debug.Log($"Parkify - {prefabInfo?.name} was successfully parkified");
+            Debug.Log($"Parkify - {prefabInfo?.name} was successfully parkified");
         }
 
 
@@ -114,28 +113,13 @@ namespace Parkify
             if (prefabInfo.m_placementMode == BuildingInfo.PlacementMode.Roadside)
             {
                 prefabInfo.m_placementMode = BuildingInfo.PlacementMode.PathsideOrGround;
-            } else if (prefabInfo.m_placementMode == BuildingInfo.PlacementMode.Shoreline)
+            } 
+            else if (prefabInfo.m_placementMode == BuildingInfo.PlacementMode.Shoreline)
             {
                 prefabInfo.m_placementMode = BuildingInfo.PlacementMode.ShorelineOrGround;
             }
 
             newAI.m_parkType = parkType;
-        }
-
-        private static void ToDecoration(BuildingInfo prefabInfo, bool allowOverlap)
-        {
-            var newAI = ReplaceAI<DecorationBuildingAI>(prefabInfo);
-            if (newAI == null)
-            {
-                return;
-            }
-
-            newAI.m_allowOverlap = allowOverlap;
-        }
-
-        private static void ToDummy(BuildingInfo prefabInfo)
-        {
-            ReplaceAI<DummyBuildingAI>(prefabInfo);
         }
 
         private static T ReplaceAI<T>(BuildingInfo prefabInfo) where T : BuildingAI
